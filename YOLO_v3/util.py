@@ -8,57 +8,62 @@ import cv2
 
 def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA=True):
 
-    #prediction : shape: N * C * G * G
-    #anchor : shape: A * 2
+    # prediction : shape: N * C * G * G
+    # anchor : shape: A * 2
     # C = A * attrs
     # attrs = [x,y,w,h,scores,class]
-    batch_size = prediction.size(0)    # = N
-    stride = inp_dim // prediction.size(2) # = I/G
+    batch_size = prediction.size(0)  # = N
+    stride = inp_dim // prediction.size(2)  # = I/G
     grid_size = inp_dim // stride  # = G
     bbox_attrs = 5 + num_classes  # = attrs
-    num_anchors = len(anchors) # = A
+    num_anchors = len(anchors)  # = A
 
-    prediction = prediction.view(
-        batch_size, bbox_attrs * num_anchors, grid_size * grid_size)      #shape = N * C * GG
-    prediction = prediction.transpose(1, 2).contiguous()                  #shape = N * GG * C
-    prediction = prediction.view(                                         #shape = N * GGA * attrs
+    prediction = prediction.view(batch_size, bbox_attrs * num_anchors,
+                                 grid_size * grid_size)  # shape = N * C * GG
+    prediction = prediction.transpose(1, 2).contiguous()  # shape = N * GG * C
+    prediction = prediction.view(  # shape = N * GGA * attrs
         batch_size, grid_size * grid_size * num_anchors, bbox_attrs)
 
-    anchors = [(a[0] / stride, a[1] / stride) for a in anchors]           #shape = A * 2
+    anchors = [(a[0] / stride, a[1] / stride) for a in anchors]  # shape = A * 2
 
-    # Sigmoid the  centre_X, centre_Y. and object confidencce        
+    # Sigmoid the  centre_X, centre_Y. and object confidencce
     prediction[:, :, 0] = torch.sigmoid(prediction[:, :, 0])
-    prediction[:, :, 1] = torch.sigmoid(prediction[:, :, 1]) 
+    prediction[:, :, 1] = torch.sigmoid(prediction[:, :, 1])
     prediction[:, :, 4] = torch.sigmoid(prediction[:, :, 4])
 
     # Add the center offsets
-    grid = np.arange(grid_size)               #shape = G * 1
-    a, b = np.meshgrid(grid, grid)            #shape = G * G
+    grid = np.arange(grid_size)  # shape = G * 1
+    a, b = np.meshgrid(grid, grid)  # shape = G * G
 
-    x_offset = torch.FloatTensor(a).view(-1, 1) #shape = GG * 1
-    y_offset = torch.FloatTensor(b).view(-1, 1) #shape = GG * 1
+    x_offset = torch.FloatTensor(a).view(-1, 1)  # shape = GG * 1
+    y_offset = torch.FloatTensor(b).view(-1, 1)  # shape = GG * 1
 
     if CUDA:
         x_offset = x_offset.cuda()
         y_offset = y_offset.cuda()
-    x_y_offset = torch.cat((x_offset, y_offset), 1).repeat(
-        1, num_anchors).view(-1, 2).unsqueeze(0)      #shape = 1 * GGA * 2
+    x_y_offset = torch.cat(
+        (x_offset, y_offset), 1).repeat(1, num_anchors).view(-1, 2).unsqueeze(
+            0)  # shape = 1 * GGA * 2
 
-    prediction[:, :, :2] += x_y_offset          #shape N * G*G*A * 2
+    prediction[:, :, :2] += x_y_offset  # shape N * G*G*A * 2
 
     # log space transform height and the width
-    anchors = torch.FloatTensor(anchors)        #shape A * 2
+    anchors = torch.FloatTensor(anchors)  # shape A * 2
 
     if CUDA:
         anchors = anchors.cuda()
 
-    anchors = anchors.repeat(grid_size * grid_size, 1).unsqueeze(0)      #shape 1 * G*G*A * 2
-    prediction[:,:,2:4] = torch.exp(prediction[:,:,2:4])*anchors         #shaoe N * GGA * 2
-    prediction[:,:,5: 5 + num_classes] = torch.sigmoid((prediction[:,:, 5 : 5 + num_classes]))
+    anchors = anchors.repeat(grid_size * grid_size,
+                             1).unsqueeze(0)  # shape 1 * G*G*A * 2
+    prediction[:, :, 2:4] = torch.exp(
+        prediction[:, :, 2:4]) * anchors  # shaoe N * GGA * 2
+    prediction[:, :, 5:5 + num_classes] = torch.sigmoid(
+        (prediction[:, :, 5:5 + num_classes]))
 
-    prediction[:,:,:4] *= stride
+    prediction[:, :, :4] *= stride
 
-    return prediction              # N * GGA * attrs
+    return prediction  # N * GGA * attrs
+
 
 if __name__ == '__main__':
     grid_size = 10
@@ -68,8 +73,8 @@ if __name__ == '__main__':
     x_offset = torch.FloatTensor(a).view(-1, 1)
     y_offset = torch.FloatTensor(b).view(-1, 1)
 
-    x_y_offset = torch.cat((x_offset, y_offset), 1).repeat(
-        1, 4).view(-1, 2).unsqueeze(0)
+    x_y_offset = torch.cat((x_offset, y_offset),
+                           1).repeat(1, 4).view(-1, 2).unsqueeze(0)
     print(x_offset.shape)
     print(x_y_offset.shape)
 

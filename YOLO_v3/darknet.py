@@ -17,8 +17,14 @@ class Darknet(nn.Module):
 
     def load_weights(self, weightfile):
         # Open the weights file
-        fp = open(weightfile, mode='rb', buffering=-1, encoding=None,
-                  errors=None, newline=None, closefd=True)
+        fp = open(
+            weightfile,
+            mode='rb',
+            buffering=-1,
+            encoding=None,
+            errors=None,
+            newline=None,
+            closefd=True)
 
         # The first 5 values are header information
         # 1. Major version number
@@ -48,7 +54,7 @@ class Darknet(nn.Module):
 
                 conv = model[0]
 
-                if(batch_normalize):
+                if (batch_normalize):
                     bn = model[1]
 
                     # Get the number of weights of Batch Norm Layer
@@ -57,18 +63,18 @@ class Darknet(nn.Module):
                     # Load the weights
                     # hint : BN := a * x_modified + b
 
-                    bn_biases = torch.from_numpy(               # b : per_channel
+                    bn_biases = torch.from_numpy(  # b : per_channel
                         weights[ptr:ptr + num_bn_biases])
                     ptr += num_bn_biases
 
-                    bn_weights = torch.from_numpy(              # a : per_channel
+                    bn_weights = torch.from_numpy(  # a : per_channel
                         weights[ptr:ptr + num_bn_biases])
                     ptr += num_bn_biases
 
                     # Mean = a * mean + (1-a)*batch_mean
 
                     bn_running_mean = torch.from_numpy(
-                        weights[ptr:ptr + num_bn_biases])       # a : per_channel
+                        weights[ptr:ptr + num_bn_biases])  # a : per_channel
                     ptr += num_bn_biases
 
                     bn_running_var = torch.from_numpy(
@@ -189,8 +195,14 @@ def parse_cfg(cfgfile):
     network to be built. Block is represented as a dictionary in the list
 
     """
-    f = open(cfgfile, mode='r', buffering=-1, encoding=None,
-             errors=None, newline=None, closefd=True)
+    f = open(
+        cfgfile,
+        mode='r',
+        buffering=-1,
+        encoding=None,
+        errors=None,
+        newline=None,
+        closefd=True)
     lines = f.read().split('\n')
     lines = [x for x in lines if len(x) > 0]
     lines = [x for x in lines if x[0] != '#']
@@ -200,11 +212,11 @@ def parse_cfg(cfgfile):
     blocks = []
 
     for line in lines:
-        if line[0] == '[':                         # This marks the start of a new block
+        if line[0] == '[':  # This marks the start of a new block
             # If block is not empty, implies it is storing values of previous block.
             if len(block) != 0:
-                blocks.append(block)               # add it the blocks list
-                block = {}                         # re-init the block
+                blocks.append(block)  # add it the blocks list
+                block = {}  # re-init the block
             block['type'] = line[1:-1].rstrip()
         else:
             key, value = line.split('=')
@@ -245,19 +257,30 @@ def create_modules(blocks):
             else:
                 pad = 0
 
-             # Add the convolutional layer
-            conv = nn.Conv2d(prev_filters, filters, kernel_size,
-                             stride=stride, padding=pad, dilation=1, groups=1, bias=bias)
+            # Add the convolutional layer
+            conv = nn.Conv2d(
+                prev_filters,
+                filters,
+                kernel_size,
+                stride=stride,
+                padding=pad,
+                dilation=1,
+                groups=1,
+                bias=bias)
             module.add_module('conv_{0}'.format(index), conv)
 
             # Add the Batch Norm Layer
             if batch_normalized:
                 bn = nn.BatchNorm2d(
-                    filters, eps=1e-5, momentum=0.1, affine=True, track_running_stats=True)
+                    filters,
+                    eps=1e-5,
+                    momentum=0.1,
+                    affine=True,
+                    track_running_stats=True)
                 module.add_module('batch_norm_{0}'.format(index), bn)
 
-             # Check the activation.
-             # It is either Linear or a Leaky ReLU for YOLO
+            # Check the activation.
+            # It is either Linear or a Leaky ReLU for YOLO
             if activation == 'leaky':
                 activn = nn.LeakyReLU(negative_slope=0.1, inplace=True)
                 module.add_module('Leaky_{0}'.format(index), activn)
@@ -267,7 +290,10 @@ def create_modules(blocks):
         elif x['type'] == 'upsample':
             stride = int(x['stride'])
             upsample = nn.Upsample(
-                size=None, scale_factor=2, mode='bilinear', align_corners=False)
+                size=None,
+                scale_factor=2,
+                mode='bilinear',
+                align_corners=False)
             module.add_module('upsample_{0}'.format(index), upsample)
 
         # If it is a route layer
@@ -288,8 +314,8 @@ def create_modules(blocks):
             route = EmptyLayer()
             module.add_module("route_{0}".format(index), route)
             if end < 0:
-                filters = output_filters[index +
-                                         start] + output_filters[index + end]
+                filters = output_filters[index + start] + output_filters[index
+                                                                         + end]
             else:
                 filters = output_filters[index + start]
 
@@ -321,13 +347,13 @@ def create_modules(blocks):
 
 def get_test_input(img_file):
     img = cv2.imread(img_file)
-    img = cv2.resize(img, (416, 416))           # Resize to the input dimension
+    img = cv2.resize(img, (416, 416))  # Resize to the input dimension
     # BGR -> RGB | H X W C -> C X H X W
     img_ = img[:, :, ::-1].transpose((2, 0, 1))
     # Add a channel at 0 (for batch) | Normalise
     img_ = img_[np.newaxis, :, :, :] / 255.0
     img_ = torch.from_numpy(img_).float()  # Convert to float
-    img_ = Variable(img_)                     # Convert to Variable
+    img_ = Variable(img_)  # Convert to Variable
     return img_
 
 

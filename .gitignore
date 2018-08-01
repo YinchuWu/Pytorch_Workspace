@@ -1,0 +1,6 @@
+data
+dataset
+train
+test
+*.jpg
+__pycache__
