@@ -1,11 +1,9 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
 from util import *
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+import cv2
 
 class Darknet(nn.Module):
     """docstring for Darknet"""
@@ -362,7 +360,9 @@ if __name__ == '__main__':
     model.load_weights("data/yolov3.weights")
     inp = get_test_input('data/dog-cycle-car.png').cuda()
     pred = model(inp, torch.cuda.is_available())
-    result = write_results(pred.data,0.0,80,)
+    result = write_results(
+        pred.data,
+        0.0,
+        80,
+    )
     print(result.shape)
-
-    

@@ -4,3 +4,4 @@ train
 test
 *.jpg
 __pycache__
+.vscode

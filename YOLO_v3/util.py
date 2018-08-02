@@ -1,7 +1,4 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.autograd import Variable
 import numpy as np
 import cv2
 
@@ -115,8 +112,9 @@ def write_results(prediction, confidencce, num_classes, nms_conf=0.4):
             # perform NMS
 
             # get the detections with one particular class
-            cls_mask = image_pred_ * (image_pred_[:, -1] == cls).float().unsqueeze(
-                1)  # shape = GAA[no_zero][detected_class] * 7
+            cls_mask = image_pred_ * (
+                image_pred_[:, -1] == cls).float().unsqueeze(
+                    1)  # shape = GAA[no_zero][detected_class] * 7
             class_mask_ind = torch.nonzero(cls_mask[:, -2]).squeeze()
             image_pred_class = cls_mask[class_mask_ind, :].view(-1, 7)
 
@@ -156,7 +154,7 @@ def write_results(prediction, confidencce, num_classes, nms_conf=0.4):
             write = True
         else:
             out = torch.cat(seq, 1)
-            output = torch.cat((output, seq), 0)
+            output = torch.cat((output, out), 0)
     try:
         return output
     except:  # There isnt a single detection in any images of the batch
@@ -165,7 +163,7 @@ def write_results(prediction, confidencce, num_classes, nms_conf=0.4):
 
 def bbox_iou(box1, box2):
     """
-    Returns the IoU of two bounding boxes 
+    Returns the IoU of two bounding boxes
      
     """
     # Get the coordinates of bounding boxes
@@ -193,18 +191,45 @@ def bbox_iou(box1, box2):
 
 
 def unique(tensor):
-    tensor_np = tensor.cpu().numpy()
-    unique_np = np.unique(tensor_np)
-    unique_tensor = torch.from_numpy(unique_np)
+    s = set([])
+    for i in tensor:
+        k = i.item()
+        s.add(k)
+    s = np.array(list(s))
+    return(torch.from_numpy(s).float().cuda())
 
-    tensor_res = tensor.new(unique_tensor.shape)
-    tensor_res.copy_(unique_tensor)
-    return tensor_res
 
 
+def letterbox_image(img, inp_dim):
+    '''resize image with unchanged aspect ratio using padding'''
+    img_w, img_h = img.shape[1], img.shape[0]
+    w, h = inp_dim
+    new_w = int(img_w * min(w / img_w, h / img_h))
+    new_h = int(img_h * min(w / img_w, h / img_h))
+    resized_image = cv2.resize(
+        img, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+
+    canvas = np.full((inp_dim[1], inp_dim[0], 3), 128)
+    canvas[(h - new_h) // 2:(h - new_h) // 2 +
+           new_h, (w - new_w) // 2:(w - new_w) // 2 + new_w, :] = resized_image
+    return canvas
+
+
+def prep_image(img, inp_dim):
+    """
+    Prepare image for inputting to the neural network. 
+    
+    Returns a Variable 
+    """
+    img = cv2.resize(img, (inp_dim, inp_dim))
+    img = img[:, :, ::-1].transpose((2, 0, 1)).copy()
+    img = torch.from_numpy(img).float().div(255.0).unsqueeze(0)
+    return img
 
 
 if __name__ == '__main__':
+    a = torch.from_numpy(np.arange(10))
+    print(unique(a))
     # grid_size = 10
     # grid = np.arange(grid_size)
     # a, b = np.meshgrid(grid, grid)
@@ -217,21 +242,21 @@ if __name__ == '__main__':
     # print(x_offset.shape)
     # print(x_y_offset.shape)
 
-    xx = torch.from_numpy(np.arange(8))
-    xx = xx.reshape((2, 2, 2))
-    y = xx[:, :, 1] > 6
-    y = y.float().unsqueeze(2)
-    t = y * xx.float()
-    z, c = torch.max(xx, 1)
-    # xx = xx.view(3, 3)
-    # c = xx.repeat(2, 2)
-    # z = z.unsqueeze(1)
-    a = torch.from_numpy(np.arange(9).reshape(3, 3))
-    b = torch.nonzero(a[:, 1])
-    # print(b)
-    print(a[b.squeeze(), :])
-    c = torch.from_numpy(np.arange(9).reshape((3, 3)))
-    d = torch.sort(c[:, 1])
-    e = torch.unique(c)
-    print(e)
-    # print(torch.unique(c[:,-1]))
+    # xx = torch.from_numpy(np.arange(8))
+    # xx = xx.reshape((2, 2, 2))
+    # y = xx[:, :, 1] > 6
+    # y = y.float().unsqueeze(2)
+    # t = y * xx.float()
+    # z, c = torch.max(xx, 1)
+    # # xx = xx.view(3, 3)
+    # # c = xx.repeat(2, 2)
+    # # z = z.unsqueeze(1)
+    # a = torch.from_numpy(np.arange(9).reshape(3, 3))
+    # b = torch.nonzero(a[:, 1])
+    # # print(b)
+    # print(a[b.squeeze(), :])
+    # c = torch.from_numpy(np.arange(9).reshape((3, 3)))
+    # d = torch.sort(c[:, 1])
+    # e = torch.unique(c)
+    # print(e)
+    # # print(torch.unique(c[:,-1]))
