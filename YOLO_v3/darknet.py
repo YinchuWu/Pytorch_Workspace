@@ -362,4 +362,7 @@ if __name__ == '__main__':
     model.load_weights("data/yolov3.weights")
     inp = get_test_input('data/dog-cycle-car.png').cuda()
     pred = model(inp, torch.cuda.is_available())
-    print(pred)
+    result = write_results(pred.data,0.0,80,)
+    print(result.shape)
+
+    
