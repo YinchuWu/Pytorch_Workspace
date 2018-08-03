@@ -2,7 +2,6 @@ import torch
 import numpy as np
 
 
-
 def write_results(prediction, confidencce, num_classes, nms_conf=0.4):
     conf_mask = (prediction[:, :, 4] > confidencce).float().unsqueeze(
         2)  # shape = N * GGA * 1
@@ -22,11 +21,12 @@ def write_results(prediction, confidencce, num_classes, nms_conf=0.4):
             ind]  # image Tensor         # shape = GGA * attrs
 
         # confidence threshholding
-        max_conf, max_conf_score = torch.max(image_pred[:, 5:5 + num_classes],
+        max_conf_score, max_conf = torch.max(image_pred[:, 5:5 + num_classes],
                                              1)  # shape = GGA
+        # print(unique(max_conf_score).shape)
         max_conf = max_conf.float().unsqueeze(1)  # shape = GGA * 1
         max_conf_score = max_conf_score.float().unsqueeze(1)  # shape = GGA * 1
-        seq = (image_pred[:, :5], max_conf, max_conf_score)
+        seq = (image_pred[:, :5], max_conf_score, max_conf)
         image_pred = torch.cat(seq, 1)  # shape = GGA * 5+2
         # print(image_pred.shape)
         non_zero_ind = torch.nonzero(
@@ -40,6 +40,7 @@ def write_results(prediction, confidencce, num_classes, nms_conf=0.4):
         except:
             continue
         # handle situations with no valid_bbox
+        # print(unique(image_pred_[:,-1]))
         if image_pred_.shape[0] == 0:
             continue
         # print(image_pred_[:, -1])
@@ -54,27 +55,34 @@ def write_results(prediction, confidencce, num_classes, nms_conf=0.4):
             # get the detections with one particular class
             cls_mask = image_pred_ * (
                 image_pred_[:, -1] == cls).float().unsqueeze(
-                    1)  # shape = GAA[no_zero][detected_class] * 7
+                    1)  # shape = GAA[detected_class] * 7
+
             class_mask_ind = torch.nonzero(cls_mask[:, -2]).squeeze()
+            # print(class_mask_ind.shape)
             image_pred_class = cls_mask[class_mask_ind, :].view(-1, 7)
 
-            # sort the detections such that the entry with the maximum objectness
-            # confidence is at the top
+            # sort the detections such that the entry with the
+            # maximum objectness confidence is at the top
             # print(image_pred_class.shape)
             conf_sort_index = torch.sort(
                 image_pred_class[:, 4], descending=True)[1]
             image_pred_class = image_pred_class[conf_sort_index]
+            # print(image_pred_class.shape)
             idx = image_pred_class.shape[0]
 
             for i in range(idx):
-                # Get the IOUs of all boxes that come after the one we are looking at in the loop
+                # Get the IOUs of all boxes that come after
+                # the one we are looking at in the loop
                 try:
                     ious = bbox_iou(image_pred_class[i].unsqueeze(0),
                                     image_pred_class[i + 1:])
+
                 except ValueError:
+                    # print('ValueError')
                     break
 
                 except IndexError:
+                    # print('IndexError')
                     break
 
                 # Zero out all the detections that have IoU > treshhold
@@ -84,17 +92,19 @@ def write_results(prediction, confidencce, num_classes, nms_conf=0.4):
                 # Remove the non-zero entries
                 non_zero_ind = torch.nonzero(image_pred_class[:, 4]).squeeze()
                 image_pred_class = image_pred_class[non_zero_ind].view(-1, 7)
-        batch_ind = image_pred_class.new(image_pred_class.shape[0],
-                                         1).fill_(ind)
-        # Repeat the batch_id for as many detections of the class cls in the image
-        seq = batch_ind, image_pred_class
 
-        if not write:
-            output = torch.cat(seq, 1)
-            write = True
-        else:
-            out = torch.cat(seq, 1)
-            output = torch.cat((output, out), 0)
+            batch_ind = image_pred_class.new(image_pred_class.shape[0],
+                                             1).fill_(ind)
+            # Repeat the batch_id for as many detections of the
+            # class cls in the image
+            seq = batch_ind, image_pred_class
+
+            if not write:
+                output = torch.cat(seq, 1)
+                write = True
+            else:
+                out = torch.cat(seq, 1)
+                output = torch.cat((output, out), 0)
     try:
         return output
     except:  # There isnt a single detection in any images of the batch
@@ -135,7 +145,7 @@ def unique(tensor):
         k = i.item()
         s.add(k)
     s = np.array(list(s))
-    return(torch.from_numpy(s).float().cuda())
+    return (torch.from_numpy(s).float().cuda())
 
 
 if __name__ == '__main__':

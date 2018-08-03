@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import darknet
-from util import write_results
 from parser import parse_cfg
 from generator import create_modules
 from transform import predict_transform
@@ -18,14 +16,7 @@ class Darknet(nn.Module):
 
     def load_weights(self, weightfile):
         # Open the weights file
-        fp = open(
-            weightfile,
-            mode='rb',
-            buffering=-1,
-            encoding=None,
-            errors=None,
-            newline=None,
-            closefd=True)
+        fp = open(weightfile, mode='rb')
 
         # The first 5 values are header information
         # 1. Major version number
@@ -103,14 +94,15 @@ class Darknet(nn.Module):
                         weights[ptr:ptr + num_biases])
                     ptr += num_biases
 
-                    # reshape the loaded weights according to the dims of the model weights
+                    # reshape the loaded weights according
+                    #  to the dims of the model weights
                     conv_biases = conv_biases.view_as(conv.bias.data)
 
                     # Finally copy the data
                     conv.bias.data.copy_(conv_biases)
 
                 # Let us load the weights for the Convolutional layers
-                num_weights = conv.weight.data.numel()
+                num_weights = conv.weight.numel()
 
                 conv_weights = torch.from_numpy(weights[ptr:ptr + num_weights])
                 ptr += num_weights
@@ -186,6 +178,3 @@ class DetectionLayer(nn.Module):
 class EmptyLayer(nn.Module):
     def __init__(self):
         super(EmptyLayer, self).__init__()
-
-
-

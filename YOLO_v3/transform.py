@@ -62,7 +62,7 @@ def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA=True):
 
     x_offset = torch.FloatTensor(a).view(-1, 1)  # shape = GG * 1
     y_offset = torch.FloatTensor(b).view(-1, 1)  # shape = GG * 1
-
+    
     if CUDA:
         x_offset = x_offset.cuda()
         y_offset = y_offset.cuda()
@@ -81,10 +81,18 @@ def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA=True):
     anchors = anchors.repeat(grid_size * grid_size,
                              1).unsqueeze(0)  # shape 1 * G*G*A * 2
     prediction[:, :, 2:4] = torch.exp(
-        prediction[:, :, 2:4]) * anchors  # shaoe N * GGA * 2
+        prediction[:, :, 2:4]) * anchors  # shape N * GGA * 2
     prediction[:, :, 5:5 + num_classes] = torch.sigmoid(
         (prediction[:, :, 5:5 + num_classes]))
 
     prediction[:, :, :4] *= stride
 
     return prediction  # N * GGA * attrs
+
+if __name__ == '__main__':
+    x = torch.Tensor(np.arange(10)).cuda().view(-1,1)
+    y = np.arange(10)
+    a,b = np.meshgrid(y,y)
+    a,b = torch.FloatTensor(a).view(-1,1),torch.FloatTensor(b).view(-1,1)
+    c = torch.cat((a,b),1).repeat(1,2)
+    print(c.shape)

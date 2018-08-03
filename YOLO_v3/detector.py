@@ -8,17 +8,20 @@ import pickle as pkl
 import pandas as pd
 from parser import arg_parse
 from loader import load_network, load_images, load_classes
+import random
 
 
-# python detector.py --images 'data/dog-cycle-car.png' --det 'det' --weights 'data/yolov3.weights'
+# python detector.py --images 'data/dog-cycle-car.png'
+# --det 'det' --weights 'data/yolov3.weights'
 def detection_loop(args, num_classes):
     write = 0
-    start_det_loop = time.time()
     CUDA = torch.cuda.is_available()
     model = load_network(args)
     inp_dim = int(model.net_info["height"])
     imlist, im_batches, im_dim_list, loaded_ims, read_dir, load_batch = load_images(
         args, inp_dim)
+    start_det_loop = time.time()
+    output_recast = 0
     for i, batch in enumerate(im_batches):
         # load the image
         start = time.time()
@@ -31,7 +34,7 @@ def detection_loop(args, num_classes):
                 nms_conf=float(args.nms_thresh))
 
         end = time.time()
-
+        output_recast += end - start
         if type(prediction) == int:
             for im_num, image in enumerate(
                     imlist[i * int(args.bs):min((i + 1) *
@@ -45,7 +48,8 @@ def detection_loop(args, num_classes):
                 )
             continue
         prediction[:,
-                   0] += i * args.bs  # transform the atribute from index in batch to index in imlist
+                   0] += i * args.bs
+        # transform the atribute from index in batch to index in imlist
 
         if not write:  # If we have't initialised output
             output = prediction
@@ -97,15 +101,15 @@ def detection_loop(args, num_classes):
         img = results[int(x[0])]
         cls = int(x[-1])
         label = "{0}".format(classes[cls])
-        cv2.rectangle(img, c1, c2, color, 1)
+        cv2.rectangle(img, c1, c2, color[cls], 1)
         t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 1, 1)[0]
         c2 = c1[0] + t_size[0] + 3, c1[1] + t_size[1] + 4
-        cv2.rectangle(img, c1, c2, color, -1)
+        cv2.rectangle(img, c1, c2, color[cls], -1)
         cv2.putText(img, label, (c1[0], c1[1] + t_size[1] + 4),
                     cv2.FONT_HERSHEY_PLAIN, 1, [225, 255, 255], 1)
         return img
 
-    list(map(lambda x: Write(x, loaded_ims, colors[1]), output))
+    list(map(lambda x: Write(x, loaded_ims, colors), output))
     det_names = pd.Series(imlist).apply(lambda x: "{}/det_{}".format(args.det, x.split("/")[-1]))
 
     list(map(cv2.imwrite, det_names, loaded_ims))
@@ -120,9 +124,9 @@ def detection_loop(args, num_classes):
                                    start_det_loop - load_batch))
     print("{:25s}: {:2.3f}".format(
         "Detection (" + str(len(imlist)) + " images)",
-        output_recast - start_det_loop))
+        output_recast))
     print("{:25s}: {:2.3f}".format("Output Processing",
-                                   class_load - output_recast))
+                                   class_load - start_det_loop))
     print("{:25s}: {:2.3f}".format("Drawing Boxes", end - draw))
     print("{:25s}: {:2.3f}".format("Average time_per_img",
                                    (end - load_batch) / len(imlist)))
@@ -141,4 +145,5 @@ if __name__ == '__main__':
 
     num_classes = 80  # For COCO
     classes = load_classes("data/coco.names")
+
     detection_loop(args, num_classes)

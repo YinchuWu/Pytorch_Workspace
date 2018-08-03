@@ -5,6 +5,7 @@ import os.path as osp
 from torch.autograd import Variable
 import cv2
 import time
+from util import write_results
 from transform import prep_image
 import numpy as np
 
@@ -39,7 +40,7 @@ def load_network(args):
 def load_images(args, inp_dim):
     if not os.path.exists(args.det):
         os.makedirs(args.det)
-    read_dir = time.time()
+    read_dir = (time.time())
     # Detection phase
     try:
         imlist = [
@@ -53,7 +54,7 @@ def load_images(args, inp_dim):
         print("No file or directory with the name {}".format(args.images))
         exit()
 
-    load_batch = time.time()
+    load_batch = (time.time())
     loaded_ims = [cv2.imread(x) for x in imlist]
     # PyTorch Variables for images
     im_batches = list(
@@ -100,7 +101,7 @@ if __name__ == '__main__':
     pred = model(inp, torch.cuda.is_available())
     result = write_results(
         pred.data,
-        0.0,
+        0.5,
         80,
     )
-    print(result.shape)
+    print(result)
