@@ -9,7 +9,7 @@ print(b)
 c = torch.tensor([1, 5.1, 3, 4])
 print(c.reshape(2, 2))
 
-x = b.new_ones(5, 3, dtype=torch.double)      # new_* methods take in sizes
+x = b.new_ones(5, 3, dtype=torch.double)  # new_* methods take in sizes
 print(x)
 
 x = torch.randn_like(b, dtype=torch.double)
@@ -20,8 +20,8 @@ print(x.shape[0])
 
 if torch.cuda.is_available():
     device = torch.device('cuda')
-    b = torch.ones_like(a, device=device)       #set running device
-    a = a.to(device)                            #change running device
+    b = torch.ones_like(a, device=device)  # set running device
+    a = a.to(device)  # change running device
     c = a + b
     print(c)
     print(c.to('cpu', torch.double))
